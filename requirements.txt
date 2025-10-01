@@ -1,0 +1,6 @@
+Flask
+PyPDF2
+openai
+python-dotenv
+flask-cors
+llama-cloud-services
