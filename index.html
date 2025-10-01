@@ -198,8 +198,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Clinical Study Data Extractor</h1>
-            <p>Extract clinical study data from PDF pages 51-111 using structured schemas</p>
+            <h1>Clinical Study Protocol Extractor</h1>
+            <p>Extract clinical study protocol data from PDF documents using AI-powered extraction</p>
         </div>
         
         <div class="form-container">
@@ -211,17 +211,8 @@
                         <p>Click to select PDF or drag and drop</p>
                         <p id="fileName" style="color: #667eea; margin-top: 10px; display: none;"></p>
                     </div>
-                </div>
-                
-                <div class="form-group">
-                    <label for="schema_type">Schema Type</label>
-                    <select id="schema_type" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px;">
-                        <option value="comprehensive_clinical_study">Comprehensive Clinical Study (Protocol + Data)</option>
-                        <option value="clinical_study_protocol">Clinical Study Protocol</option>
-                        <option value="schedule_of_activities">Schedule of Activities</option>
-                    </select>
                     <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">
-                        Select the schema type for data extraction. Comprehensive schema combines protocol and clinical data. Pages 51-111 will be processed.
+                        Upload a clinical study protocol PDF. The system will extract structured protocol data including activities, schedules, and procedures.
                     </small>
                 </div>
                 
@@ -241,11 +232,11 @@
                     </div>
                 </div>
                 
-                <button type="submit" class="btn" id="submitBtn">Extract Clinical Data (Pages 51-111)</button>
+                <button type="submit" class="btn" id="submitBtn">Extract Clinical Protocol Data</button>
             </form>
             
             <div class="loading" id="loading">
-                <p>Processing PDF... This may take a few moments.</p>
+                <p>Processing PDF for clinical protocol extraction... This may take a few moments.</p>
             </div>
             
             <div class="result" id="result">
@@ -306,10 +297,8 @@
             }
 
             const displayOption = document.querySelector('input[name="displayOption"]:checked').value;
-            const schemaType = document.getElementById('schema_type').value;
             const formData = new FormData();
             formData.append('file', file);
-            formData.append('schema_type', schemaType);
 
             // Show loading
             loading.style.display = 'block';
@@ -331,12 +320,12 @@
                         const url = URL.createObjectURL(blob);
                         const a = document.createElement('a');
                         a.href = url;
-                        a.download = 'clinical_data_extraction.json';
+                        a.download = 'clinical_protocol_extraction.json';
                         document.body.appendChild(a);
                         a.click();
                         document.body.removeChild(a);
                         URL.revokeObjectURL(url);
-                        showResult('Success', 'Data extraction complete! File downloaded.', 'success');
+                        showResult('Success', 'Protocol extraction complete! File downloaded.', 'success');
                     } else {
                         // Display inline
                         showResult('Success', formatExtractionData(data), 'success');
@@ -379,7 +368,7 @@
             
             // Display extracted structured data
             if (data.extracted_data) {
-                html += `<h4>Extracted Clinical Data:</h4>`;
+                html += `<h4>Extracted Protocol Data:</h4>`;
                 html += `<div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 10px 0;">`;
                 
                 // Pretty print the structured data
@@ -389,6 +378,15 @@
                     html += `<pre style="white-space: pre-wrap; font-family: monospace; font-size: 12px;">${JSON.stringify(data.extracted_data, null, 2)}</pre>`;
                 }
                 
+                html += `</div>`;
+            }
+            
+            // Display default template if available
+            if (data.default_template) {
+                html += `<h4>Default Template Data:</h4>`;
+                html += `<div style="background: #e8f4f8; padding: 15px; border-radius: 5px; margin: 10px 0;">`;
+                html += `<p><em>This template provides comprehensive clinical study protocol structure:</em></p>`;
+                html += formatStructuredData(data.default_template);
                 html += `</div>`;
             }
             

@@ -58,8 +58,8 @@ def extract():
         if extraction_result.get('success'):
             print(f"[FLASK] LlamaExtract successful!")
             
-            # Default template data structure to include with response
-            default_data = {
+            # Return both the fixed JSON structure AND the extracted data
+            response_data = {
                 "informedConsent": {
                     "mainStudy": True,
                     "geneticSampleOptional": True,
@@ -270,17 +270,15 @@ def extract():
                         "drug": "Nab-paclitaxel",
                         "sectionNumber": "6"
                     }
-                ]
-            }
-            
-            response_data = {
-                'success': True,
-                'filename': extraction_result.get('filename'),
-                'schema_type': extraction_result.get('schema_type'),
-                'agent_name': extraction_result.get('agent_name'),
-                'extracted_data': extraction_result.get('data'),
-                'default_template': default_data,
-                'message': 'Clinical study protocol extraction completed using LlamaExtract'
+                ],
+                # Include the actual extracted data from LlamaExtract
+                "llamaExtractedData": extraction_result.get('data'),
+                "extractionMetadata": {
+                    "filename": extraction_result.get('filename'),
+                    "schema_type": extraction_result.get('schema_type'),
+                    "agent_name": extraction_result.get('agent_name'),
+                    "message": "Clinical study protocol extraction completed using LlamaExtract"
+                }
             }
             return jsonify(response_data)
         else:
