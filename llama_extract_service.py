@@ -5,6 +5,13 @@ from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
 try:
+    import PyPDF2
+    PYPDF2_AVAILABLE = True
+except ImportError:
+    print("Warning: PyPDF2 not available. Install with: pip install PyPDF2")
+    PYPDF2_AVAILABLE = False
+
+try:
     from llama_cloud_services import LlamaExtract
     LLAMA_EXTRACT_AVAILABLE = True
 except ImportError:
@@ -67,9 +74,44 @@ class LlamaExtractService:
         else:
             print("[LlamaExtract] llama-cloud-services package not available")
     
+    def extract_pages_20_to_40(self, input_path, output_path):
+        """Extract pages 20-40 from PDF and save to new file"""
+        if not PYPDF2_AVAILABLE:
+            print("[LlamaExtract] PyPDF2 not available, processing entire PDF")
+            return input_path
+            
+        try:
+            with open(input_path, 'rb') as input_file:
+                reader = PyPDF2.PdfReader(input_file)
+                writer = PyPDF2.PdfWriter()
+                
+                total_pages = len(reader.pages)
+                print(f"[LlamaExtract] Total pages in PDF: {total_pages}")
+                
+                # Extract pages 20-40 (0-indexed, so 19-39)
+                start_page = 19  # Page 20 (0-indexed)
+                end_page = min(39, total_pages - 1)  # Page 40 or last page
+                
+                if start_page >= total_pages:
+                    print(f"[LlamaExtract] Warning: Start page 20 exceeds total pages ({total_pages})")
+                    return input_path
+                
+                print(f"[LlamaExtract] Extracting pages 20-{end_page + 1} (total: {end_page - start_page + 1} pages)")
+                
+                for page_num in range(start_page, end_page + 1):
+                    writer.add_page(reader.pages[page_num])
+                
+                with open(output_path, 'wb') as output_file:
+                    writer.write(output_file)
+                
+                return output_path
+                
+        except Exception as e:
+            print(f"[LlamaExtract] Error extracting pages 51-111: {e}")
+            return input_path
+    
     def is_available(self):
         return self.extractor is not None
-    
     def get_schema(self):
         """Returns the clinical study protocol schema"""
         return get_clinical_study_protocol_schema()
@@ -98,12 +140,19 @@ class LlamaExtractService:
             
             print(f"[LlamaExtract] Created temp file: {temp_file_path}")
             
-            # Check if temp file was created successfully
-            if not os.path.exists(temp_file_path) or os.path.getsize(temp_file_path) == 0:
-                return {"success": False, "error": "Failed to create temporary file"}
+            # Extract pages 20-40 to a new temporary file
+            with tempfile.NamedTemporaryFile(delete=False, suffix='_pages_20_40.pdf') as pages_file:
+                pages_file_path = pages_file.name
             
-            file_size = os.path.getsize(temp_file_path)
-            print(f"[LlamaExtract] Temp file size: {file_size} bytes")
+            # Extract specific pages
+            final_file_path = self.extract_pages_20_to_40(temp_file_path, pages_file_path)
+            
+            # Check if temp file was created successfully
+            if not os.path.exists(final_file_path) or os.path.getsize(final_file_path) == 0:
+                return {"success": False, "error": "Failed to create temporary file or extract pages 20-40"}
+            
+            file_size = os.path.getsize(final_file_path)
+            print(f"[LlamaExtract] Processing file size: {file_size} bytes")
             
             # Get clinical study protocol schema
             try:
@@ -120,8 +169,9 @@ class LlamaExtractService:
             print(f"[LlamaExtract] Creating extraction agent...")
             agent = self.extractor.create_agent(name=unique_name, data_schema=schema)
             
-            print(f"[LlamaExtract] Running extraction...")
-            result = agent.extract(temp_file_path)
+            print(f"[LlamaExtract] Running extraction on pages 51-111...")
+            # Extract only pages 51-111
+            result = agent.extract(final_file_path)
             
             # Log the extraction results
             print("\n" + "="*50)
@@ -146,13 +196,14 @@ class LlamaExtractService:
             return {"success": False, "error": error_msg}
             
         finally:
-            # Clean up temporary file
-            if temp_file_path and os.path.exists(temp_file_path):
-                try:
-                    os.unlink(temp_file_path)
-                    print(f"[LlamaExtract] Cleaned up temp file: {temp_file_path}")
-                except Exception as e:
-                    print(f"[LlamaExtract] Failed to cleanup temp file: {e}")
+            # Clean up temporary files
+            for file_path in [temp_file_path, pages_file_path]:
+                if file_path and os.path.exists(file_path):
+                    try:
+                        os.unlink(file_path)
+                        print(f"[LlamaExtract] Cleaned up temp file: {file_path}")
+                    except Exception as e:
+                        print(f"[LlamaExtract] Failed to cleanup temp file: {e}")
 
 # Service instance
 llama_service = LlamaExtractService()
