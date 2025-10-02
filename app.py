@@ -5,7 +5,7 @@ from flask_cors import CORS
 from llama_extract_service import llama_service
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+CORS(app, origins="*", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"], allow_headers="*")  # Enable CORS for all origins and ports
 
 @app.route('/')
 def index():
